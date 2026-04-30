@@ -1,20 +1,27 @@
-from metrics import iou_score, dice_score
+import torch
+import pytest
+from metrics.segmentation import iou_score, dice_score, pixel_accuracy
 
-# Test with perfect prediction
-pred = torch.ones(2, 1, 256, 256).cuda()
-target = torch.ones(2, 1, 256, 256).cuda()
+def test_metrics_perfect():
+    pred_logits = torch.ones(2, 1, 64, 64) * 10.0 # High logits -> prob ~1.0
+    target = torch.ones(2, 1, 64, 64)
+    
+    iou = iou_score(pred_logits, target)
+    dice = dice_score(pred_logits, target)
+    acc = pixel_accuracy(pred_logits, target)
+    
+    assert iou == pytest.approx(1.0, abs=1e-4)
+    assert dice == pytest.approx(1.0, abs=1e-4)
+    assert acc == pytest.approx(1.0, abs=1e-4)
 
-iou = iou_score(pred, target)
-dice = dice_score(pred, target)
-
-print(f"IoU (perfect): {iou:.4f}")   # Should be ~1.0
-print(f"Dice (perfect): {dice:.4f}") # Should be ~1.0
-
-# Test with all-zero prediction
-pred = torch.zeros(2, 1, 256, 256).cuda()
-target = torch.ones(2, 1, 256, 256).cuda()
-
-iou = iou_score(pred, target)
-print(f"IoU (all wrong): {iou:.4f}")  # Should be ~0.0
-
-print("✅ Metrics working")
+def test_metrics_wrong():
+    pred_logits = torch.ones(2, 1, 64, 64) * -10.0 # Low logits -> prob ~0.0
+    target = torch.ones(2, 1, 64, 64)
+    
+    iou = iou_score(pred_logits, target)
+    dice = dice_score(pred_logits, target)
+    acc = pixel_accuracy(pred_logits, target)
+    
+    assert iou == pytest.approx(0.0, abs=1e-4)
+    assert dice == pytest.approx(0.0, abs=1e-4)
+    assert acc == pytest.approx(0.0, abs=1e-4)

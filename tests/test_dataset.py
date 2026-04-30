@@ -21,3 +21,4 @@ def test_dataset_shape_and_range(tmp_path: Path):
     assert x.shape[0] == 3
     assert y.shape[0] == 1
     assert y.max().item() <= 1.0
+    
