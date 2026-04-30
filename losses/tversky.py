@@ -11,12 +11,9 @@ class TverskyLoss(nn.Module):
 
     def forward(self, logits: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
         probs = torch.sigmoid(logits)
-        probs = probs.view(-1)
-        targets = targets.view(-1)
-
-        tp = (probs * targets).sum()
-        fp = (probs * (1 - targets)).sum()
-        fn = ((1 - probs) * targets).sum()
-
+        targets = targets.float()
+        tp = (probs * targets).sum(dim=(1, 2, 3))
+        fp = (probs * (1 - targets)).sum(dim=(1, 2, 3))
+        fn = ((1 - probs) * targets).sum(dim=(1, 2, 3))
         tversky = (tp + self.smooth) / (tp + self.alpha * fp + self.beta * fn + self.smooth)
-        return 1 - tversky
+        return 1.0 - tversky.mean()

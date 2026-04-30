@@ -1,25 +1,28 @@
 import torch
 
 
-def iou_score(preds: torch.Tensor, targets: torch.Tensor, smooth: float = 1e-6) -> torch.Tensor:
-    preds = preds.view(-1)
-    targets = targets.view(-1)
-    intersection = (preds * targets).sum()
-    union = preds.sum() + targets.sum() - intersection
-    return (intersection + smooth) / (union + smooth)
+def iou_score(logits: torch.Tensor, targets: torch.Tensor, threshold: float = 0.5, eps: float = 1e-6) -> float:
+    probs = torch.sigmoid(logits)
+    preds = (probs > threshold).float()
+    targets = targets.float()
+    intersection = (preds * targets).sum(dim=(1, 2, 3))
+    union = preds.sum(dim=(1, 2, 3)) + targets.sum(dim=(1, 2, 3)) - intersection
+    return ((intersection + eps) / (union + eps)).mean().item()
 
 
-def dice_score(preds: torch.Tensor, targets: torch.Tensor, smooth: float = 1e-6) -> torch.Tensor:
-    preds = preds.view(-1)
-    targets = targets.view(-1)
-    intersection = (preds * targets).sum()
-    return (2 * intersection + smooth) / (preds.sum() + targets.sum() + smooth)
+def dice_score(logits: torch.Tensor, targets: torch.Tensor, threshold: float = 0.5, eps: float = 1e-6) -> float:
+    probs = torch.sigmoid(logits)
+    preds = (probs > threshold).float()
+    targets = targets.float()
+    intersection = (preds * targets).sum(dim=(1, 2, 3))
+    denom = preds.sum(dim=(1, 2, 3)) + targets.sum(dim=(1, 2, 3))
+    return ((2 * intersection + eps) / (denom + eps)).mean().item()
 
 
-def pixel_accuracy(preds: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
-    correct = (preds == targets).sum().float()
-    return correct / targets.numel()
-
+def pixel_accuracy(logits: torch.Tensor, targets: torch.Tensor, threshold: float = 0.5) -> float:
+    probs = torch.sigmoid(logits)
+    preds = (probs > threshold).float()
+    return (preds == targets.float()).float().mean().item()
 
 def compute_metrics(
     logits: torch.Tensor, targets: torch.Tensor, threshold: float = 0.5

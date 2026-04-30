@@ -1,9 +1,9 @@
 import torch
 import torch.nn as nn
 
-from losses.tversky_loss import TverskyLoss
-from losses.dice_loss import DiceLoss
-from losses.combined_loss import CombinedLoss
+from losses.tversky import TverskyLoss
+from losses.dice__bce import DiceLoss
+from losses.combined import CombinedLoss
 
 
 def build_loss(cfg) -> nn.Module:

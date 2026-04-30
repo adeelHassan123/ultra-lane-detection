@@ -9,7 +9,7 @@
 dist/
 build/
 outputs/
-venv/
+.venv/
 venv/*
 outputs/ 
 data_raw/ 
@@ -23,3 +23,4 @@ __pycache__/
 kaggle.json 
 .env 
 lane_detection.egg-info/
+docs/
