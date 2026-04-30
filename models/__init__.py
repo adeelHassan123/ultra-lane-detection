@@ -6,7 +6,7 @@ def get_model(cfg):
     if cfg.model_name == "baseline_cnn":
         return BaselineCNN(
             dropout=cfg.dropout,
-            use_bn=cfg.use_batchnorm,
+            use_batchnorm=cfg.use_batchnorm,
             activation=cfg.activation,
         )
     if cfg.model_name == "unet_smp":
