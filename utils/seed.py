@@ -10,3 +10,9 @@ def set_seed(seed: int) -> None:
     torch.cuda.manual_seed_all(seed)
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
+
+
+def set_all_seeds(seed: int) -> None:
+    set_seed(seed)
+    torch.use_deterministic_algorithms(False)  # Some ops don't have deterministic versions
+
