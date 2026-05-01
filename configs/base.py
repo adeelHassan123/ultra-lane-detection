@@ -19,13 +19,13 @@ class BaseConfig:
     threshold: float = 0.5
     amp: bool = True
 
-    data_root: str = "processed_data"
+    data_root: str = "/content/drive/MyDrive/lane_detection_data/processed"
 
-    outputs_root: str = "outputs"
-    checkpoints_dir: str = "outputs/checkpoints"
-    logs_dir: str = "outputs/logs"
-    figures_dir: str = "outputs/figures"
-    results_dir: str = "outputs/results"
+    outputs_root: str = "/content/drive/MyDrive/lane_detection_data/outputs"
+    checkpoints_dir: str = "/content/drive/MyDrive/lane_detection_data/outputs/checkpoints"
+    logs_dir: str = "/content/drive/MyDrive/lane_detection_data/outputs/logs"
+    figures_dir: str = "/content/drive/MyDrive/lane_detection_data/outputs/figures"
+    results_dir: str = "/content/drive/MyDrive/lane_detection_data/outputs/results"
 
     model_name: str = "baseline_cnn"
     optimizer_name: str = "adamw"
