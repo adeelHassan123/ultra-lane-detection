@@ -58,6 +58,9 @@ class FastLaneDataset(Dataset):
             transformed = self.transform(image=image, mask=mask)
             image = transformed["image"]
             mask = transformed["mask"]
+            # Ensure mask has channel dimension (1, H, W)
+            if mask.ndim == 2:
+                mask = mask.unsqueeze(0)
             return image, mask
         
         # Fast path: manual conversion to tensors
