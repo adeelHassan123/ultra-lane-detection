@@ -2,7 +2,7 @@ import torch
 from torch.optim import Adam, AdamW, SGD
 from torch.optim.lr_scheduler import CosineAnnealingLR
 
-from data.dataloader import build_dataloaders
+from data.fast_dataset import build_fast_dataloaders
 from losses import get_loss
 from metrics.advanced import auc_iou
 from metrics.segmentation import dice_score
@@ -33,7 +33,7 @@ class Trainer:
         self.scheduler = CosineAnnealingLR(self.optimizer, T_max=cfg.epochs)
         self.scaler = torch.amp.GradScaler('cuda', enabled=(cfg.amp and self.device.type == "cuda"))
         self.stopper = EarlyStopping(patience=cfg.patience)
-        self.train_loader, self.val_loader = build_dataloaders(cfg)
+        self.train_loader, self.val_loader = build_fast_dataloaders(cfg)
         self.logger = CSVLogger(f"{cfg.logs_dir}/{cfg.experiment_name}_s{cfg.seed}.csv")
         self.checkpoint_path = f"{self.cfg.checkpoints_dir}/{self.cfg.experiment_name}_s{self.cfg.seed}_best.pth"
 
