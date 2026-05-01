@@ -19,7 +19,7 @@ class BaseConfig:
     threshold: float = 0.5
     amp: bool = True
 
-    data_root: str = "/content/local_data"
+    data_root: str = "/content/fast_data"  # Use numpy format for 10-20x speedup
 
     outputs_root: str = "/content/drive/MyDrive/lane_detection_data/outputs"
     checkpoints_dir: str = "/content/drive/MyDrive/lane_detection_data/outputs/checkpoints"
