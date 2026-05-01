@@ -26,7 +26,7 @@ class Trainer:
         self.criterion = get_loss(cfg)
         self.optimizer = self._build_optimizer(phase="warmup")
         self.scheduler = CosineAnnealingLR(self.optimizer, T_max=cfg.epochs)
-        self.scaler = torch.cuda.amp.GradScaler(enabled=(cfg.amp and self.device.type == "cuda"))
+        self.scaler = torch.amp.GradScaler('cuda', enabled=(cfg.amp and self.device.type == "cuda"))
         self.stopper = EarlyStopping(patience=cfg.patience)
         self.train_loader, self.val_loader = build_dataloaders(cfg)
         self.logger = CSVLogger(f"{cfg.logs_dir}/{cfg.experiment_name}_s{cfg.seed}.csv")

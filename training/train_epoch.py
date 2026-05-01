@@ -13,7 +13,7 @@ def train_one_epoch(model, loader, criterion, optimizer, scaler, device, cfg):
         images = images.to(device, non_blocking=True)
         masks = masks.to(device, non_blocking=True)
         optimizer.zero_grad(set_to_none=True)
-        with torch.cuda.amp.autocast(enabled=(cfg.amp and device.type == "cuda")):
+        with torch.amp.autocast('cuda', enabled=(cfg.amp and device.type == "cuda")):
             logits = model(images)
             loss = criterion(logits, masks)
         scaler.scale(loss).backward()
