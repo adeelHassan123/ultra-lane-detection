@@ -1,5 +1,5 @@
 from losses.combined import CombinedLoss
-from losses.dice__bce import DiceBCELoss
+from losses.dice_bce import DiceBCELoss
 from losses.tversky import TverskyLoss
 
 

@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 
 from losses.tversky import TverskyLoss
-from losses.dice__bce import DiceBCELoss
+from losses.dice_bce import DiceBCELoss
 from losses.combined import CombinedLoss
 
 
