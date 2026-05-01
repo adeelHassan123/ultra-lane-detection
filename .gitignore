@@ -23,4 +23,3 @@ __pycache__/
 kaggle.json 
 .env 
 lane_detection.egg-info/
-docs/
