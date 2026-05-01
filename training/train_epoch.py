@@ -24,5 +24,12 @@ def train_one_epoch(model, loader, criterion, optimizer, scaler, device, cfg):
 
         losses.append(loss.item())
         ious.append(iou_score(logits.detach(), masks.detach(), threshold=cfg.threshold))
-        pbar.set_postfix(loss=f"{losses[-1]:.4f}", iou=f"{ious[-1]:.4f}")
+        
+        # Monitor GPU memory for debugging bottlenecks
+        gpu_mem = torch.cuda.memory_allocated(device) / 1e9 if torch.cuda.is_available() else 0
+        pbar.set_postfix(
+            loss=f"{losses[-1]:.4f}", 
+            iou=f"{ious[-1]:.4f}",
+            gpu=f"{gpu_mem:.1f}GB"
+        )
     return sum(losses) / len(losses), sum(ious) / len(ious)

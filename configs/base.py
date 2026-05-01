@@ -8,7 +8,7 @@ class BaseConfig:
     seed: int = 42
     seeds: List[int] = field(default_factory=lambda: [42, 123, 777])
     image_size: int = 256
-    num_workers: int = 2
+    num_workers: int = 3  # Optimized for Colab's 4 vCPUs (3 workers + 1 main thread)
     batch_size: int = 8
     epochs: int = 30
     learning_rate: float = 1e-3

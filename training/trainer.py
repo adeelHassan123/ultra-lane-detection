@@ -22,7 +22,12 @@ class Trainer:
         self.cfg = cfg
         self.cfg.ensure_output_dirs()
         self.device = get_device()
-        self.model = get_model(cfg).to(self.device)
+        model = get_model(cfg).to(self.device)
+        # Compile model for 20-30% speedup (PyTorch 2.0+)
+        if hasattr(torch, 'compile'):
+            print("[OPTIMIZATION] Compiling model with torch.compile() for maximum speed...")
+            model = torch.compile(model, mode="max-autotune")
+        self.model = model
         self.criterion = get_loss(cfg)
         self.optimizer = self._build_optimizer(phase="warmup")
         self.scheduler = CosineAnnealingLR(self.optimizer, T_max=cfg.epochs)

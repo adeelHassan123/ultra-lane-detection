@@ -24,7 +24,7 @@ Key components communicate through well-defined interfaces:
 |-----------|----------------|
 | **Data Pipeline** | Loading, augmentation, preprocessing, validation |
 | **Model Factory** | Architecture instantiation (CNN, U-Net, SMP) |
-| **Trainer** | Training loop, checkpointing, logging |
+| **Trainer** | Training loop, checkpointing, logging | 
 | **Evaluator** | Metrics computation, visualization export |
 | **Experiments** | Config management, hyperparameter sweeps |
 
