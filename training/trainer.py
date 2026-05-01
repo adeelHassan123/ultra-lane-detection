@@ -82,12 +82,21 @@ class Trainer:
                 self.optimizer = self._build_optimizer(phase="full")
                 self.scheduler = CosineAnnealingLR(self.optimizer, T_max=max(self.cfg.epochs - epoch, 1))
 
+            # Clean epoch header
+            print(f"\nEpoch [{epoch+1}/{self.cfg.epochs}]")
+            print("-" * 50)
+
             train_loss, train_iou = train_one_epoch(
                 self.model, self.train_loader, self.criterion, self.optimizer, self.scaler, self.device, self.cfg
             )
             val_loss, val_iou = validate(self.model, self.val_loader, self.criterion, self.device, self.cfg)
             val_auc, val_dice = self._compute_extra_validation_metrics()
             self.scheduler.step()
+
+            # Epoch summary
+            print(f"Train - Loss: {train_loss:.4f} | IoU: {train_iou:.4f}")
+            print(f"Val   - Loss: {val_loss:.4f} | IoU: {val_iou:.4f} | Dice: {val_dice:.4f} | AUC: {val_auc:.4f}")
+            print(f"LR: {self.optimizer.param_groups[0]['lr']:.2e}")
             row = {
                 "epoch": epoch + 1,
                 "train_loss": train_loss,
