@@ -1,4 +1,4 @@
-﻿__pycache__/
+__pycache__/
 *.pyc
 *.pyo
 *.pyd
@@ -23,3 +23,5 @@ __pycache__/
 kaggle.json 
 .env 
 lane_detection.egg-info/
+lane_detection_data/
+lane_detection_data-*.zip
