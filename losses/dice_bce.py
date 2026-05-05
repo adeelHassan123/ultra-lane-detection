@@ -9,6 +9,7 @@ class DiceBCELoss(nn.Module):
         self.smooth = smooth
 
     def forward(self, logits: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
+        targets = targets.float()  # ensure float32 — ToTensorV2 may produce uint8
         bce = self.bce(logits, targets)
         probs = torch.sigmoid(logits)
         intersection = (probs * targets).sum(dim=(1, 2, 3))
