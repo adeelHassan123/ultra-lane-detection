@@ -25,12 +25,28 @@ from configs.unet_config import UNetConfig
 
 
 def get_config():
-    base = UNetConfig(experiment_name="e9_ablation")
-    return replace(
-        base,
-        pretrained=True,
-        train_augmentation="none",          # Changed: "heavy" → "none" (ablation)
-        freeze_encoder_epochs=15,
-        encoder_learning_rate=1e-4,
-        decoder_learning_rate=1e-3,
-    )
+  base_cfg = UNetConfig(experiment_name="e10_ultimate") # New experiment name
+  
+  return replace(
+      base_cfg,
+      # --- Architecture & Pretraining (from E7) ---
+      model_name="unet_smp",
+      encoder_name="resnet34",
+      pretrained=True,
+      
+      # --- Training Params (Optimized) ---
+      epochs=60,                      # Increased from 45
+      batch_size=8,
+      learning_rate=1e-3,             # Default U-Net LR
+      encoder_learning_rate=1e-4,     # Differential LR
+      decoder_learning_rate=1e-3,     # Differential LR
+      weight_decay=1e-4,
+      patience=15,                    # Increased patience for early stopping
+      min_delta=0.001,                # Ignore minor fluctuations
+      
+      # --- Loss & Augmentation (Proven effective) ---
+      loss_name="combined",
+      train_augmentation="heavy",     # Essential for robustness
+      val_augmentation="none",
+)
+
