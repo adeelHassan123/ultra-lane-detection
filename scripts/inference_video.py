@@ -2,7 +2,7 @@ import sys
 import os
 from pathlib import Path
 
-# Add project root to path so 'models', 'configs' etc. can be found
+# Add project root to path
 sys.path.append(str(Path(__file__).parent.parent))
 
 import cv2
@@ -12,19 +12,21 @@ import argparse
 from tqdm import tqdm
 from models import get_model
 from configs.unet_config import UNetConfig
+from configs.cnn_config import CNNConfig
 from training.checkpoint import load_checkpoint
 from data.transforms import build_transforms
 
-def process_video(video_path, output_path, checkpoint_path):
-    # 1. Setup Configuration and Model
-    cfg = UNetConfig()
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+def process_video(video_path, output_path, checkpoint_path, threshold=0.5):
+    # 1. Setup Architecture
+    exp_id = Path(checkpoint_path).name.split('_')[0]
+    cfg = CNNConfig() if exp_id in ["e0", "e1", "e2", "e3", "e4", "e5"] else UNetConfig()
     
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = get_model(cfg).to(device)
     load_checkpoint(checkpoint_path, model)
     model.eval()
     
-    # Use the EXACT same transforms as validation
+    # Validation transforms (no noise, just resize/pad/normalize)
     transform = build_transforms(cfg.image_size, policy="none")
     
     # 2. Open Video
@@ -38,55 +40,68 @@ def process_video(video_path, output_path, checkpoint_path):
     fourcc = cv2.VideoWriter_fourcc(*'mp4v')
     out = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
     
-    print(f"[INFO] Processing {total_frames} frames with PADDING FIX...")
-    
-    # Pre-calculate padding to reverse it later
-    # (Albumentations PadIfNeeded centers the image)
+    # Alignment Math
     scale = cfg.image_size / max(width, height)
     new_w, new_h = int(width * scale), int(height * scale)
     pad_top = (cfg.image_size - new_h) // 2
     pad_left = (cfg.image_size - new_w) // 2
     
+    print(f"[INFO] Running ROBUST inference using {exp_id}...")
+
     with torch.no_grad():
         for _ in tqdm(range(total_frames)):
             ret, frame = cap.read()
-            if not ret:
-                break
+            if not ret: break
             
-            # --- PRE-PROCESS (Exact Training Match) ---
+            # --- PRE-PROCESS ---
             img_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             transformed = transform(image=img_rgb)
             img_tensor = transformed["image"].unsqueeze(0).to(device)
             
             # --- INFERENCE ---
             logits = model(img_tensor)
-            mask = torch.sigmoid(logits) > 0.5
-            mask = mask.cpu().numpy().squeeze().astype(np.uint8)
+            probs = torch.sigmoid(logits).cpu().numpy().squeeze()
             
-            # --- ALIGNMENT FIX (Remove Padding) ---
-            # Extract the actual image area from the square mask
+            # --- ROBUST POST-PROCESS ---
+            # 1. Threshold to remove low-confidence noise (hallucinations)
+            mask = (probs > threshold).astype(np.uint8)
+            
+            # 2. Denoise: Remove small isolated dots
+            kernel = np.ones((3,3), np.uint8)
+            mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
+            
+            # 3. Alignment Fix: Crop the padding
             mask_cropped = mask[pad_top : pad_top + new_h, pad_left : pad_left + new_w]
+            probs_cropped = probs[pad_top : pad_top + new_h, pad_left : pad_left + new_w]
             
-            # Resize back to original video resolution
+            # 4. Resize back to video size
             mask_full = cv2.resize(mask_cropped, (width, height), interpolation=cv2.INTER_NEAREST)
+            probs_full = cv2.resize(probs_cropped, (width, height), interpolation=cv2.INTER_LINEAR)
             
-            # --- OVERLAY ---
-            green_overlay = np.zeros_like(frame)
-            green_overlay[:, :, 1] = 255
-            lane_color = cv2.bitwise_and(green_overlay, green_overlay, mask=mask_full)
-            combined = cv2.addWeighted(frame, 1.0, lane_color, 0.4, 0)
+            # --- SMOOTH VISUALIZATION ---
+            # Create a heatmap look (Green color intensity based on probability)
+            heatmap = (probs_full * 255).astype(np.uint8)
+            green_lane = np.zeros_like(frame)
+            green_lane[:, :, 1] = heatmap # Apply confidence to green channel
+            
+            # Highlight only the mask area
+            final_lane = cv2.bitwise_and(green_lane, green_lane, mask=mask_full)
+            
+            # Blend: We use a lower alpha for the lane to keep it clean
+            combined = cv2.addWeighted(frame, 1.0, final_lane, 0.6, 0)
             
             out.write(combined)
             
     cap.release()
     out.release()
-    print(f"[SUCCESS] Result saved with fix: {output_path}")
+    print(f"[SUCCESS] Robust result saved: {output_path}")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--input", type=str, required=True, help="Path to input video file")
-    parser.add_argument("--output", type=str, default="output_lane_detection.mp4")
-    parser.add_argument("--ckpt", type=str, default="outputs/checkpoints/e9_ablation_s42_best.pth")
+    parser.add_argument("--input", type=str, required=True)
+    parser.add_argument("--output", type=str, default="robust_demo.mp4")
+    parser.add_argument("--ckpt", type=str, default="outputs/checkpoints/e7_transfer_s42_best.pth")
+    parser.add_argument("--thresh", type=float, default=0.4) # Lower thresh can help if model is shy
     
     args = parser.parse_args()
-    process_video(args.input, args.output, args.ckpt)
+    process_video(args.input, args.output, args.ckpt, args.thresh)
