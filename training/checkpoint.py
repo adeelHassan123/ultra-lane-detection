@@ -22,9 +22,22 @@ def load_checkpoint(path: str, model, optimizer=None, scheduler=None):
         return 0, -1.0
     payload = torch.load(path, map_location="cpu")
     state_dict = payload["model"]
-    # torch.compile() wraps keys with "_orig_mod." prefix — strip it for compatibility
-    state_dict = {k.replace("_orig_mod.", ""): v for k, v in state_dict.items()}
-    model.load_state_dict(state_dict)
+
+    # Handle torch.compile() prefix mismatch
+    # Case 1: Checkpoint has "_orig_mod." but model doesn't expect it → strip it
+    # Case 2: Model expects "_orig_mod." (compiled) but checkpoint doesn't have it → add it
+    has_orig_mod_in_ckpt = any(k.startswith("_orig_mod.") for k in state_dict.keys())
+    model_is_compiled = hasattr(model, "_orig_mod")
+
+    if has_orig_mod_in_ckpt and not model_is_compiled:
+        # Strip prefix: compiled checkpoint → non-compiled model
+        state_dict = {k.replace("_orig_mod.", ""): v for k, v in state_dict.items()}
+    elif not has_orig_mod_in_ckpt and model_is_compiled:
+        # Add prefix: non-compiled checkpoint → compiled model
+        state_dict = {"_orig_mod." + k: v for k, v in state_dict.items()}
+    # else: keys already match, no transformation needed
+
+    model.load_state_dict(state_dict, strict=True)
     if optimizer and payload.get("optimizer"):
         optimizer.load_state_dict(payload["optimizer"])
     if scheduler and payload.get("scheduler"):
