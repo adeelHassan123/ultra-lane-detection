@@ -27,7 +27,7 @@ def get_cfg(exp_name: str):
     if exp_name == "e8":
         return replace(UNetConfig(experiment_name="e8_loss"), loss_name="dice_bce")
     if exp_name == "e9":
-        return replace(UNetConfig(experiment_name="e9_ablation"), pretrained=True, train_augmentation="none")
+        return replace(UNetConfig(experiment_name="e9_ablation"), pretrained=True, train_augmentation="heavy")
     raise ValueError(f"Unknown experiment: {exp_name}")
 
 
