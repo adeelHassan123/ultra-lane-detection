@@ -4,6 +4,24 @@ A modular, extensible deep learning framework for lane detection using semantic 
 
 ---
 
+## 📂 Detailed Folder Documentation
+
+For a deep dive into the "Evidence & Proof" of each module, refer to the following folder-specific guides:
+
+- [**`analysis/`**](analysis/README.md): Post-training evaluation, charts, and failure analysis.
+- [**`configs/`**](configs/README.md): Centralized experiment control and hyperparameter management.
+- [**`data/`**](data/README.md): Optimized data pipeline, mask dilation, and NumPy acceleration.
+- [**`experiments/`**](experiments/README.md): The scientific lab defining E0 through E9.
+- [**`losses/`**](losses/README.md): Objective functions for handling class imbalance.
+- [**`metrics/`**](metrics/README.md): Quantifying success via IoU, Dice, and Efficiency.
+- [**`models/`**](models/README.md): Neural architectures (CNN vs. U-Net).
+- [**`scripts/`**](scripts/README.md): Automation scripts for training and analysis.
+- [**`tests/`**](tests/README.md): Ensuring structural integrity via automated verification.
+- [**`training/`**](training/README.md): The training engine with AMP and Early Stopping.
+- [**`utils/`**](utils/README.md): Cross-cutting helpers (logging, seeds, devices).
+
+---
+
 ## Architecture Overview
 
 ### System Architecture

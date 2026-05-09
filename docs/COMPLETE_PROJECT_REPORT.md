@@ -5,7 +5,7 @@
 ---
 
 # 1. Project Overview
-
+    
 ## 1.1 What is Ultra Lane Detection?
 
 Ultra Lane Detection is a comprehensive deep learning system that performs **binary semantic segmentation** to identify and localize lane markings in road images captured from vehicle-mounted cameras. The system transforms raw RGB road images into precise binary masks where lane pixels are distinguished from background elements.
