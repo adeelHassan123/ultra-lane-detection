@@ -16,7 +16,7 @@ from configs.cnn_config import CNNConfig
 from training.checkpoint import load_checkpoint
 from data.transforms import build_transforms
 
-def process_video(video_path, output_path, checkpoint_path, threshold=0.5):
+def process_video(video_path, output_path, checkpoint_path, threshold=0.4):
     # 1. Setup Architecture
     exp_id = Path(checkpoint_path).name.split('_')[0]
     cfg = CNNConfig() if exp_id in ["e0", "e1", "e2", "e3", "e4", "e5"] else UNetConfig()
@@ -26,7 +26,6 @@ def process_video(video_path, output_path, checkpoint_path, threshold=0.5):
     load_checkpoint(checkpoint_path, model)
     model.eval()
     
-    # Validation transforms (no noise, just resize/pad/normalize)
     transform = build_transforms(cfg.image_size, policy="none")
     
     # 2. Open Video
@@ -40,13 +39,16 @@ def process_video(video_path, output_path, checkpoint_path, threshold=0.5):
     fourcc = cv2.VideoWriter_fourcc(*'mp4v')
     out = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
     
-    # Alignment Math
+    # Pre-calculate padding
     scale = cfg.image_size / max(width, height)
     new_w, new_h = int(width * scale), int(height * scale)
     pad_top = (cfg.image_size - new_h) // 2
     pad_left = (cfg.image_size - new_w) // 2
     
-    print(f"[INFO] Running ROBUST inference using {exp_id}...")
+    # --- TEMPORAL SMOOTHING BUFFER ---
+    prev_mask = None
+    
+    print(f"[INFO] Generating PORTFOLIO-GRADE video using {exp_id}...")
 
     with torch.no_grad():
         for _ in tqdm(range(total_frames)):
@@ -62,46 +64,58 @@ def process_video(video_path, output_path, checkpoint_path, threshold=0.5):
             logits = model(img_tensor)
             probs = torch.sigmoid(logits).cpu().numpy().squeeze()
             
-            # --- ROBUST POST-PROCESS ---
-            # 1. Threshold to remove low-confidence noise (hallucinations)
+            # --- ROI MASKING (Industry Secret #1) ---
+            # Most dashcams have lanes in the bottom 60%. Ignore the top 40% (sky).
+            roi_limit = int(new_h * 0.45)
+            probs[:pad_top + roi_limit, :] = 0
+            
+            # --- THRESHOLD ---
             mask = (probs > threshold).astype(np.uint8)
             
-            # 2. Denoise: Remove small isolated dots
-            kernel = np.ones((3,3), np.uint8)
-            mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
+            # --- LANE THINNING (Industry Secret #2) ---
+            # Shrink the 'fat' dilated training masks back to real line sizes
+            kernel = np.ones((5,5), np.uint8)
+            mask = cv2.erode(mask, kernel, iterations=1)
+            # Remove isolated noise
+            mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, np.ones((3,3), np.uint8))
             
-            # 3. Alignment Fix: Crop the padding
+            # --- TEMPORAL SMOOTHING (Industry Secret #3) ---
+            # Average with previous frame to stop flickering
+            if prev_mask is not None:
+                mask = cv2.bitwise_or(mask, cv2.bitwise_and(mask, prev_mask))
+            prev_mask = mask.copy()
+            
+            # --- ALIGNMENT & RESIZE ---
             mask_cropped = mask[pad_top : pad_top + new_h, pad_left : pad_left + new_w]
-            probs_cropped = probs[pad_top : pad_top + new_h, pad_left : pad_left + new_w]
-            
-            # 4. Resize back to video size
             mask_full = cv2.resize(mask_cropped, (width, height), interpolation=cv2.INTER_NEAREST)
-            probs_full = cv2.resize(probs_cropped, (width, height), interpolation=cv2.INTER_LINEAR)
             
-            # --- SMOOTH VISUALIZATION ---
-            # Create a heatmap look (Green color intensity based on probability)
-            heatmap = (probs_full * 255).astype(np.uint8)
-            green_lane = np.zeros_like(frame)
-            green_lane[:, :, 1] = heatmap # Apply confidence to green channel
+            # --- BEAUTIFUL VISUALIZATION ---
+            # We will use a neon-green "Glow" look
+            canvas = frame.copy()
             
-            # Highlight only the mask area
-            final_lane = cv2.bitwise_and(green_lane, green_lane, mask=mask_full)
+            # Create a thick "glow" layer
+            glow_mask = cv2.dilate(mask_full, np.ones((7,7), np.uint8), iterations=1)
+            canvas[glow_mask > 0] = [0, 255, 0] # Bright Green
             
-            # Blend: We use a lower alpha for the lane to keep it clean
-            combined = cv2.addWeighted(frame, 1.0, final_lane, 0.6, 0)
+            # Add text overlay to make it look professional
+            cv2.putText(canvas, f"AI LANE DETECTION | MODEL: {exp_id.upper()}", (50, 50), 
+                        cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+            
+            # Blend with original (alpha=0.6 for the lane)
+            combined = cv2.addWeighted(frame, 1.0, canvas, 0.4, 0)
             
             out.write(combined)
             
     cap.release()
     out.release()
-    print(f"[SUCCESS] Robust result saved: {output_path}")
+    print(f"[SUCCESS] Portfolio video saved: {output_path}")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--input", type=str, required=True)
-    parser.add_argument("--output", type=str, default="robust_demo.mp4")
+    parser.add_argument("--output", type=str, default="portfolio_demo.mp4")
     parser.add_argument("--ckpt", type=str, default="outputs/checkpoints/e7_transfer_s42_best.pth")
-    parser.add_argument("--thresh", type=float, default=0.4) # Lower thresh can help if model is shy
+    parser.add_argument("--thresh", type=float, default=0.35) 
     
     args = parser.parse_args()
     process_video(args.input, args.output, args.ckpt, args.thresh)
